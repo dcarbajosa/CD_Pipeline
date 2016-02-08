@@ -5,14 +5,13 @@ node('master') {
 		// Set a particular maven install to use for this build
 		env.JAVA_HOME="${tool 'jdk1.8.0_72'}"
 		env.PATH="${tool 'maven3'}/bin:${env.PATH}"
+		def project_name="SpringHibernateExample"
 		
 		def newVersion = getSourceCode()
 		
 		developmentStage(newVersion)
 	
-		//copyToArtifactRepo()
-		
-		//stagingStage()
+		stagingStage(project_name)
 		
 	}
 	
@@ -59,17 +58,17 @@ node('master') {
 	}
 	
 	
-	
-	def copyToArtifactRepo(){
-		
-		sh 'mvn -B deploy'
-		
-	}
-	
-	def stagingStage(){
+	def stagingStage(project_name){
 		// Start a new stage and make sure only one build can enter this stage
 		stage name: 'Staging', concurrency: 1
-	
+		
+		git url: 'https://github.com/dcarbajosa/CD_Pipeline.git', branch: 'master'
+		
+		echo "${pwd()}"
+		
+		sh "cd  Infrastructure/${project_name}/Environments/Staging/Vagrant/"
+		
+		sh "vagrant up"
 		// Call deploy function defined below
 	//    deploy 'target/x.war', 'staging'
 	}
