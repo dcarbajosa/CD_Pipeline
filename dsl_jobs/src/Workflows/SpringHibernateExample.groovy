@@ -75,7 +75,7 @@ node('master') {
 		def staging_infra_dir = "${pwd()}/Infrastructure/${project_name}/Environments/Staging"
 		def chef_conn_user = "root"
 		def chef_conn_pwd = "123456"
-		def role_list = "'role[tomcat-webserver-core]','role[mysql-databaseserver-core]'"
+		def role_list = "'role[spring-hibernate-example-databaseserver]','role[tomcat-webserver-core]'"
 		def node_name="spring-hibernate-example-staging"
 		
 		git url: 'https://github.com/dcarbajosa/CD_Pipeline.git', branch: 'master'
@@ -88,6 +88,15 @@ node('master') {
 		echo "${env.JENKINS_HOME}"
 		
 		sh "sshpass -p '${chef_conn_pwd}' scp -rp ${env.JENKINS_HOME}/devops ${chef_conn_user}@${stagingIP}:/etc/devops"
+		
+		//Database scripts
+		sh "sshpass -p '${chef_conn_pwd}' ssh ${chef_conn_user}@${stagingIP} 'mkdir -p /etc/devops/deploy'"
+		sh "sshpass -p '${chef_conn_pwd}' scp -rp ${staging_infra_dir}/DB ${chef_conn_user}@${stagingIP}:/etc/devops/deploy/DB"
+		
+		//Deployed war
+		
+		//sh "sshpass -p '${chef_conn_pwd}' scp -rp ${staging_infra_dir}/DB ${chef_conn_user}@${stagingIP}:/etc/devops/deploy/DB"
+		
 		
 		sh "cd ${env.CHEF_HOME}; knife bootstrap ${stagingIP} -r ${role_list} -x ${chef_conn_user} -P ${chef_conn_pwd} --sudo"
 		
