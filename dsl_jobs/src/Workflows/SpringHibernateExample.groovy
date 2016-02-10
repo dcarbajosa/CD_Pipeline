@@ -4,18 +4,27 @@ node('master') {
 		
 		// Set a particular maven install to use for this build
 		env.JAVA_HOME="${tool 'jdk1.8.0_72'}"
-		env.PATH="${tool 'maven3'}/bin:${env.PATH}"
+		//env.VAGRANT_HOME="/opt/vagrant"
+		env.PATH="${tool 'maven3'}/bin:/usr/local/bin:${env.PATH}"
+		env.CHEF_HOME="/Users/davidcarbajosa/chef-repo"
+		
+		echo "${env.PATH}"
+		
 		def project_name="SpringHibernateExample"
 		
 		def newVersion = getSourceCode()
 		
 		developmentStage(newVersion)
-	
+		
+		doCheckpoint("Before Staging")
+		
 		stagingStage(project_name)
+		
+		doCheckpoint("Before Production")
 		
 	}
 	
-	//checkpointandinputs()
+	
 	
 	//productionStage()
 	
@@ -62,21 +71,38 @@ node('master') {
 		// Start a new stage and make sure only one build can enter this stage
 		stage name: 'Staging', concurrency: 1
 		
+		def stagingIP = "192.168.99.61"
+		def staging_infra_dir = "${pwd()}/Infrastructure/${project_name}/Environments/Staging"
+		def chef_conn_user = "root"
+		def chef_conn_pwd = "123456"
+		def role_list = "'role[tomcat-webserver-core]','role[mysql-databaseserver-core]'"
+		def node_name="spring-hibernate-example-staging"
+		
 		git url: 'https://github.com/dcarbajosa/CD_Pipeline.git', branch: 'master'
 		
 		echo "${pwd()}"
 		
-		sh "cd  Infrastructure/${project_name}/Environments/Staging/Vagrant/"
+		//sh "vagrant -v"
+		sh "cd ${staging_infra_dir}/Vagrant;vagrant up"
 		
-		sh "vagrant up"
+		echo "${env.JENKINS_HOME}"
+		
+		sh "sshpass -p '${chef_conn_pwd}' scp -rp ${env.JENKINS_HOME}/devops ${chef_conn_user}@${stagingIP}:/etc/devops"
+		
+		sh "cd ${env.CHEF_HOME}; knife bootstrap ${stagingIP} -r ${role_list} -x ${chef_conn_user} -P ${chef_conn_pwd} --sudo"
+		
+		input message: "Does staging look good?"
+		
+		sh "cd ${staging_infra_dir}/Vagrant;vagrant destroy -f"
+		sh "cd ${env.CHEF_HOME}; knife node delete --yes ${node_name};knife client delete --yes ${node_name}"
+		
 		// Call deploy function defined below
 	//    deploy 'target/x.war', 'staging'
 	}
 	
-	def checkpointandinputs(){
+	def doCheckpoint(message){
 		
 		// Pause this workflow for human interaction
-		input message: "Does http://localhost:8080/staging/ look good?"
 		
 		// Start a try catch block
 		try {
@@ -85,7 +111,7 @@ node('master') {
 			 * safe point so this build can be run from here if this build fails after
 			 * this.
 			 */
-			checkpoint('Before production')
+			checkpoint(message)
 		} catch (NoSuchMethodError _) {
 			// Since Checkpoints is a feature of CloudBees jenkins enterprise, log it
 			// and continue with the rest of the workflow
