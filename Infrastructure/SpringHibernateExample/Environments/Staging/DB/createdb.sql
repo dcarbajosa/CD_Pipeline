@@ -7,5 +7,5 @@ CREATE TABLE EMPLOYEE(
     PRIMARY KEY (id)
 );
 
-INSERT INTO EMPLOYEE ( id, name, joining_date, salary, ssn ) VALUES ( uuid(), 'Jane Smith', '10/08/2002', 5000.00, '11111111111' );
-INSERT INTO EMPLOYEE ( id, name, joining_date, salary, ssn ) VALUES ( uuid(), 'Dave Richards','10/08/2003', 15000.00, '11111111112' );
+INSERT INTO EMPLOYEE ( id, name, joining_date, salary, ssn ) VALUES ( uuid(), 'Jane Smith', '2002-10-08', 5000.00, '11111111111' );
+INSERT INTO EMPLOYEE ( id, name, joining_date, salary, ssn ) VALUES ( uuid(), 'Dave Richards','2003-10-08', 15000.00, '11111111112' );
