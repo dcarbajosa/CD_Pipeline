@@ -8,4 +8,4 @@ CREATE TABLE EMPLOYEE(
 );
 
 INSERT INTO EMPLOYEE ( id, name, joining_date, salary, ssn ) VALUES ( uuid(), 'Jane Smith', '2002-10-08', 5000.00, '11111111111' );
-INSERT INTO EMPLOYEE ( id, name, joining_date, salary, ssn ) VALUES ( uuid(), 'Dave Richards','2003-10-08', 15000.00, '11111111112' );
+/* INSERT INTO EMPLOYEE ( id, name, joining_date, salary, ssn ) VALUES ( uuid(), 'Dave Richards','2003-10-08', 15000.00, '11111111112' );*/
