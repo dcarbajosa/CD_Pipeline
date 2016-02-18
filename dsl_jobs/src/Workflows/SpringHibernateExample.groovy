@@ -87,10 +87,15 @@ node('master') {
 		
 		echo "${env.JENKINS_HOME}"
 		
+		
+		
 		sh "sshpass -p '${chef_conn_pwd}' scp -rp ${env.JENKINS_HOME}/devops ${chef_conn_user}@${stagingIP}:/etc/devops"
 		
+		//Update host file with chef server FQDN
+		sh "sshpass -p '${chef_conn_pwd}' ssh ${chef_conn_user}@${stagingIP} 'echo 192.168.56.102 chefserver.dct.hm >> /etc/hosts'"
 		//Database scripts
 		sh "sshpass -p '${chef_conn_pwd}' ssh ${chef_conn_user}@${stagingIP} 'mkdir -p /etc/devops/deploy'"
+		
 		sh "sshpass -p '${chef_conn_pwd}' scp -rp ${staging_infra_dir}/DB ${chef_conn_user}@${stagingIP}:/etc/devops/deploy/DB"
 		
 		//Deployed war
