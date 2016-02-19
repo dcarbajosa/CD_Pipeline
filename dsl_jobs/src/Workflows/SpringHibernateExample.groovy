@@ -73,8 +73,6 @@ node('master') {
 		
 		def stagingIP = "192.168.99.61"
 		def staging_infra_dir = "${pwd()}/Infrastructure/${project_name}/Environments/Staging"
-		def chef_conn_user = "root"
-		def chef_conn_pwd = "123456"
 		def role_list = "'role[spring-hibernate-example-databaseserver]','role[spring-hibernate-example-webserver]'"
 		def node_name="spring-hibernate-example-staging"
 		
@@ -82,34 +80,51 @@ node('master') {
 		
 		echo "${pwd()}"
 		
-		//sh "vagrant -v"
-		sh "cd ${staging_infra_dir}/Vagrant;vagrant up"
+		try{
+			//sh "vagrant -v"
+			sh "cd ${staging_infra_dir}/Vagrant;vagrant up"
+			
+			echo "${env.JENKINS_HOME}"
+			
+			// copy ssh key
+			sh "cp -rp ${env.JENKINS_HOME}/../.ssh ${staging_infra_dir}/Vagrant"
+			
+			// copy jenkins devops folder
+			sh "cp -rp ${env.JENKINS_HOME}/devops ${staging_infra_dir}/Vagrant"
+			
+			//Database scripts
+			
+			sh "mkdir -p ${staging_infra_dir}/Vagrant/devops/deploy"
+			
+			sh "cp -rp ${staging_infra_dir}/DB ${staging_infra_dir}/Vagrant/devops/deploy/DB"
+			
+			//Deployed war
+			sh "cp -rp ${pwd()}/target/${project_name}-${newVersion}-SNAPSHOT.war ${staging_infra_dir}/Vagrant/devops/deploy/${project_name}.war"
+			
+			
+			//Copy devops into /etc/devops - guest
+			sh "cd ${staging_infra_dir}/Vagrant;vagrant ssh -c 'sudo cp -rp /vagrant/devops /etc/devops'"
+			
+			//Update host file with chef server FQDN - guest
+			sh ($/cd ${staging_infra_dir}/Vagrant;vagrant ssh -c "sudo sh -c 'echo 192.168.56.102 chefserver.dct.hm >> /etc/hosts'"/$)
+			
+			// enable ssh public key
+			//sh ($/cd ${staging_infra_dir}/Vagrant;vagrant ssh -c "sudo cp -rp /vagrant/.ssh /root;sudo sh -c 'cat /root/.ssh/id_rsa.pub >>/root/.ssh/authorized_keys'"/$)
+			//To avoid password usage manually execute on the building node:
+			//ssh-copy-id user@hostname.example.com
+	
+			withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: '650c3d87-f20f-42f1-9d8d-af68c501448c',
+				usernameVariable: 'vagrantUser', passwordVariable: 'vagrantUserPwd']]) {
+				echo "${env.vagrantUser} and ${env.vagrantUserPwd}"
+				sh "cd ${env.CHEF_HOME}; knife bootstrap ${stagingIP} -r ${role_list} -x ${env.vagrantUser} -P ${env.vagrantUserPwd} --sudo"
+			}		
 		
-		echo "${env.JENKINS_HOME}"
-		
-		
-		
-		sh "sshpass -p '${chef_conn_pwd}' scp -rp ${env.JENKINS_HOME}/devops ${chef_conn_user}@${stagingIP}:/etc/devops"
-		
-		//Update host file with chef server FQDN
-		sh "sshpass -p '${chef_conn_pwd}' ssh ${chef_conn_user}@${stagingIP} 'echo 192.168.56.102 chefserver.dct.hm >> /etc/hosts'"
-		//Database scripts
-		sh "sshpass -p '${chef_conn_pwd}' ssh ${chef_conn_user}@${stagingIP} 'mkdir -p /etc/devops/deploy'"
-		
-		sh "sshpass -p '${chef_conn_pwd}' scp -rp ${staging_infra_dir}/DB ${chef_conn_user}@${stagingIP}:/etc/devops/deploy/DB"
-		
-		//Deployed war
-		
-		sh "sshpass -p '${chef_conn_pwd}' scp -rp ${pwd()}/target/${project_name}-${newVersion}-SNAPSHOT.war ${chef_conn_user}@${stagingIP}:/etc/devops/deploy/${project_name}.war"
-		
-		
-		sh "cd ${env.CHEF_HOME}; knife bootstrap ${stagingIP} -r ${role_list} -x ${chef_conn_user} -P ${chef_conn_pwd} --sudo"
-		
-		input message: "Does staging look good?"
-		
-		sh "cd ${staging_infra_dir}/Vagrant;vagrant destroy -f"
-		sh "cd ${env.CHEF_HOME}; knife node delete --yes ${node_name};knife client delete --yes ${node_name}"
-		
+			input message: "Does staging look good?"
+		}
+		finally{
+			sh "cd ${staging_infra_dir}/Vagrant;vagrant destroy -f"
+			sh "cd ${env.CHEF_HOME}; knife node delete --yes ${node_name};knife client delete --yes ${node_name}"
+		}
 		// Call deploy function defined below
 	//    deploy 'target/x.war', 'staging'
 	}
